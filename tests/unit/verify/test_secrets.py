@@ -28,7 +28,7 @@ def test_fails_when_an_unredacted_secret_is_in_a_spilled_file(tmp_path: Path) ->
     spill_file = tmp_path / "h1.txt"
     spill_file.write_text("token=sk-abcdefghijklmnopqrstuvwxyz0123456789")
     log = EventLog(tmp_path / "run.jsonl")
-    log.emit("s1", "spilled", turn=0, handle_id="h1", tokens=10, path=str(spill_file))
+    log.emit("s1", "spilled", turn=0, handle_id="h1", tokens=10, blob_path=str(spill_file))
 
     findings = [f for f in run_on_log(tmp_path / "run.jsonl") if f.ff_id == "ff_no_secret_leak"]
 

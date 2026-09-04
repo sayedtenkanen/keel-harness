@@ -95,9 +95,31 @@ def run(
                 # Filter out extra args that the tool doesn't expect
                 import inspect
 
+                from keel.store.errors import PathTraversalError
+
                 sig = inspect.signature(tool_fn)  # type: ignore[arg-type]
                 valid_args = {k: v for k, v in call.args.items() if k in sig.parameters}
-                result = tool_fn(**valid_args, store=store)  # type: ignore[operator]
+                try:
+                    result = tool_fn(**valid_args, store=store)  # type: ignore[operator]
+                except PathTraversalError as e:
+                    log.emit(
+                        session_id,
+                        "path_traversal_rejected",
+                        turn=turn,
+                        attempted_path=str(e),
+                        tool=call.tool,
+                    )
+                    log.emit(
+                        session_id,
+                        "tool_resulted",
+                        turn=turn,
+                        tool=call.tool,
+                        ok=False,
+                        tokens=0,
+                        spilled=False,
+                    )
+                    history.append({"tool": call.tool, "content": f"ERROR: {e}"})
+                    continue
 
                 if hasattr(result, "spilled") and result.spilled:
                     log.emit(
@@ -115,7 +137,7 @@ def run(
                         turn=turn,
                         handle_id=result.handle.id,
                         tokens=result.handle.tokens,
-                        path=str(store_dir / "blobs" / result.handle.id),
+                        blob_path=str(store_dir / "blobs" / result.handle.id),
                     )
                     if result.redaction_labels:
                         log.emit(

@@ -58,7 +58,7 @@ class Spilled(EventBase):
     turn: int
     handle_id: str
     tokens: int
-    path: str
+    blob_path: str
 
 
 class FinalAnswer(EventBase):
@@ -87,6 +87,18 @@ class RedactionApplied(EventBase):
     labels: list[str]
 
 
+class PathTraversalRejected(EventBase):
+    """Emitted when a path traversal attempt is detected and rejected.
+
+    `attempted_path` is the malicious label; `tool` is the tool that triggered it.
+    """
+
+    kind: Literal["path_traversal_rejected"] = "path_traversal_rejected"
+    turn: int
+    attempted_path: str
+    tool: str
+
+
 AnyEvent = (
     RunStarted
     | ModelCalled
@@ -97,6 +109,7 @@ AnyEvent = (
     | FinalAnswer
     | RunEnded
     | RedactionApplied
+    | PathTraversalRejected
 )
 
 EVENT_TYPES: dict[str, type[EventBase]] = {
@@ -109,4 +122,5 @@ EVENT_TYPES: dict[str, type[EventBase]] = {
     "final_answer": FinalAnswer,
     "run_ended": RunEnded,
     "redaction_applied": RedactionApplied,
+    "path_traversal_rejected": PathTraversalRejected,
 }

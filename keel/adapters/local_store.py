@@ -12,6 +12,7 @@ from pathlib import Path
 
 from keel.ports.store import HandleKind
 from keel.security.redact import redact
+from keel.store.errors import PathTraversalError
 from keel.store.handles import Handle
 
 CHARS_PER_TOKEN = 4
@@ -55,7 +56,7 @@ class LocalStore:
 
     def put(self, content: bytes, *, kind: HandleKind, label: str, tokens: int) -> Handle:
         if not _is_safe_label(label):
-            raise ValueError(f"path traversal detected in label: {label}")
+            raise PathTraversalError(f"path traversal detected in label: {label}")
 
         redacted, _ = redact(content.decode("utf-8", errors="replace"))
         raw = redacted.encode("utf-8")

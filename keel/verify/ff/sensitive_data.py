@@ -39,12 +39,14 @@ def check(events: list[AnyEvent]) -> list[Finding]:
                             f"unredacted {match.label} in {event.kind} at seq {event.seq}",
                         )
                     )
-        if isinstance(event, Spilled) and Path(event.path).exists():
-            for match in scan(Path(event.path).read_text(encoding="utf-8")):
+        if isinstance(event, Spilled) and Path(event.blob_path).exists():
+            for match in scan(Path(event.blob_path).read_text(encoding="utf-8")):
                 if match.category == "sensitive_data":
                     findings.append(
                         Finding(
-                            FF_ID, False, f"unredacted {match.label} in spilled file {event.path}"
+                            FF_ID,
+                            False,
+                            f"unredacted {match.label} in spilled file {event.blob_path}",
                         )
                     )
     if not findings:

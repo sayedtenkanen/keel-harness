@@ -1,7 +1,7 @@
 """ff_pointer_integrity — every handle that entered a window must resolve.
 
 Slice 2: checks that every Spilled event's handle_id exists in the store's
-blob directory. The store path is derived from the Spilled event's path field.
+blob directory. The store path is derived from the Spilled event's blob_path field.
 """
 
 from __future__ import annotations
@@ -13,16 +13,14 @@ from keel.verify.registry import Finding, register
 
 FF_ID = "ff_pointer_integrity"
 
-STORE_BLOBS_DIR = "blobs"
-
 
 def check(events: list[AnyEvent]) -> list[Finding]:
     findings: list[Finding] = []
 
     for event in events:
         if isinstance(event, Spilled):
-            # The path field contains the full path to the blob file
-            blob_path = Path(event.path)
+            # The blob_path field contains the full path to the blob file
+            blob_path = Path(event.blob_path)
             if not blob_path.exists():
                 findings.append(
                     Finding(
