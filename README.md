@@ -8,7 +8,7 @@ relationship to the model it wraps.
 
 **Status:** pre-alpha. The design is settled ([docs/SPEC.md](docs/SPEC.md)); the
 implementation follows the slice plan in [docs/SLICE_PLAN.md](docs/SLICE_PLAN.md).
-Right now `keel --version` is the only thing that runs.
+Slices S1, S1a, S2, S3, and S1b are implemented.
 
 ## The idea in four sentences
 
@@ -35,7 +35,17 @@ Vendor adapters are extras: `uv sync --extra anthropic`, `--extra openai`.
     uv run keel --version
     uv run python -m keel --version
 
-`keel run` and `keel verify` arrive in slices 1 and 13 respectively.
+### Available commands
+
+    uv run keel run --model fake --script tests/fixtures/s1.yaml   # run a scripted session
+    uv run keel verify <log.jsonl>                                  # run fitness functions on a log
+    uv run keel inspect sessions                                    # list all sessions
+    uv run keel inspect timeline <session_id>                       # event timeline for a session
+    uv run keel inspect store                                       # list store handles
+    uv run keel inspect verify <session_id>                         # verify a session by ID
+
+All `keel inspect` subcommands accept `--json` for machine-readable output and
+`--dir` to override the default `.keel/logs` or `.keel/store` directory.
 
 ## Develop
 
@@ -51,6 +61,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 ## Layout
 
     keel/        the package — grows one module per slice, see docs/SPEC.md §5
+    keel/inspector/  read-only views over session artifacts (S1b)
     tests/unit   fast, deterministic; run in CI
     tests/learning  pins external dependency behavior; local only
     tests/corpus    task corpus fixtures for the bench

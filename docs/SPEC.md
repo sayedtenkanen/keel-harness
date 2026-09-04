@@ -217,6 +217,7 @@ keel/
   orchestrate/    policy.py  contract.py  runner.py
   session/        events.py  log.py  index.py  handoff.py  resume.py
   verify/         registry.py  report.py  ff/
+  inspector/      reader.py  cli.py
   schemas/        v1/
 tests/            unit/  learning/  corpus/
 bench/            tasks/  oracles/  baseline_harness.py

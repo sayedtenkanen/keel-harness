@@ -31,6 +31,7 @@ StorePort). Package layout is in SPEC.md §5; modules appear as slices land.
 - Tests mirror package: keel/context/budget.py -> tests/unit/context/test_budget.py
 - Learning tests (external contracts): tests/learning/, marker `learning`, not in CI
 - Bench (baseline + corpus + oracles): bench/
+- Inspector CLI: keel/inspector/ (read-only views over session artifacts)
 
 ## Style
 Python 3.11+, pydantic v2, ruff (line 100), mypy strict. Concrete type hints.

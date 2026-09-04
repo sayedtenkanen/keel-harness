@@ -91,6 +91,25 @@ current slice" — noted here rather than silently.
 - Not done here, deferred to when exec exists (S4) and orchestration exists (S12):
   actually blocking a call, versus just flagging it after the fact.
 
+### S1b · Inspector CLI — ✅ implemented
+Goal: read-only views over session artifacts so the harness's real data is
+visible without hand-parsing JSONL/JSON. Additive tooling, not a core-loop
+slice; no writes to the store or log.
+- `inspector/reader.py`: pure readers — `discover_sessions()`,
+  `build_timeline()`, `load_store_index()`, `find_session_log()`.
+- `inspector/cli.py`: `keel inspect` subcommand with four sub-subcommands:
+  `sessions` (list), `timeline` (event replay), `store` (list/show handles),
+  `verify` (run fitness functions).
+- Wired into `keel/cli.py` as `keel inspect {sessions,timeline,store,verify}`.
+- `keel inspect verify` is a thin session-ID-aware wrapper around the existing
+  `run_on_log()` from `keel/verify/registry.py`; `keel verify <path>` remains
+  the path-based entry point. Both share one implementation.
+- Fixture logs: `tests/fixtures/inspect_{clean,torn,denial,spill}.jsonl` —
+  covers clean session, torn last line, permission denial, and spilled/redacted
+  content.
+- Tests: 34 unit + integration tests covering human-readable and `--json`
+  output paths, torn-line warnings, store list/show, and verify findings.
+
 ## Phase 2 — Context
 
 ### S6 · Ingest
