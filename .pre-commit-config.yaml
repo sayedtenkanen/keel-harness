@@ -1,0 +1,53 @@
+# Local mirror of what CI runs (.github/workflows/ci.yml). Every hook is
+# `language: system` and shells out via `uv run`, so it uses this project's
+# own pinned tool versions from pyproject.toml — never a separately cloned
+# mirror that could drift to a different ruff/mypy/bandit version than CI
+# uses. (pre-commit's hosted repo hooks for ruff and gitleaks were tried
+# first; this environment's proxy can't reliably fetch their mirrors — see
+# scripts/pre-commit-gitleaks.sh for the gitleaks-specific note.)
+#
+# Setup (once per clone): uv run pre-commit install --hook-type pre-commit --hook-type pre-push
+
+repos:
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: ruff check --fix
+        entry: uv run ruff check --fix
+        language: system
+        types: [python]
+        pass_filenames: false
+
+      - id: ruff-format
+        name: ruff format
+        entry: uv run ruff format
+        language: system
+        types: [python]
+        pass_filenames: false
+
+      - id: mypy
+        name: mypy (strict)
+        entry: uv run mypy
+        language: system
+        types: [python]
+        pass_filenames: false
+
+      - id: bandit
+        name: bandit (security static analysis)
+        entry: uv run bandit -c pyproject.toml -r keel
+        language: system
+        pass_filenames: false
+        files: ^keel/
+
+      - id: gitleaks
+        name: gitleaks (secret scan, best-effort locally — CI is authoritative)
+        entry: scripts/pre-commit-gitleaks.sh
+        language: system
+        pass_filenames: false
+
+      - id: pytest
+        name: pytest (unit tests, pre-push only — too slow for every commit)
+        entry: uv run pytest -m "not learning"
+        language: system
+        pass_filenames: false
+        stages: [pre-push]

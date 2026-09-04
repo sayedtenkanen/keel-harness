@@ -1,0 +1,10 @@
+title = "keel-harness gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Fixtures under tests/ intentionally contain fake-secret-shaped strings to exercise keel.security.redact and its fitness functions; they are not real credentials."
+paths = [
+  '''tests/.*''',
+]

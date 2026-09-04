@@ -1,0 +1,67 @@
+[build-system]
+requires = ["hatchling>=1.25,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "keel-harness"
+dynamic = ["version"]
+description = "A context-managed, provider-agnostic agent harness. The window is a cache; the store is truth."
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.11"
+authors = [{ name = "Sayed Tenkanen" }]
+dependencies = [
+  "pydantic>=2.7,<3",
+  "pyyaml>=6,<7",
+]
+
+[project.optional-dependencies]
+anthropic = ["anthropic>=0.40,<1.0"]
+openai = ["openai>=1.40,<2.0"]
+dev = [
+  "pytest>=8,<9",
+  "pytest-cov>=5,<7",
+  "ruff>=0.6,<1.0",
+  "mypy>=1.10,<2",
+  "types-PyYAML>=6,<7",
+  "bandit>=1.7,<2",
+  "pre-commit>=3,<4",
+]
+
+[project.scripts]
+keel = "keel.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/sayedtenkanen/keel-harness"
+
+[tool.hatch.version]
+path = "keel/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["keel"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+markers = [
+  "learning: pins observed behavior of an external dependency; excluded from CI by default",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "ANN"]
+ignore = ["ANN401"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["ANN"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+packages = ["keel"]
+
+[tool.bandit]
+exclude_dirs = ["tests", "bench", ".venv"]

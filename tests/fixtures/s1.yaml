@@ -1,0 +1,8 @@
+session_id: s1-demo
+steps:
+  - step: tool_call
+    tool: read
+    args:
+      path: tests/fixtures/small.txt
+  - step: final_answer
+    text: "done"
