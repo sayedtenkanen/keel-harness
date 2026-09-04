@@ -38,15 +38,24 @@ together, with the verifier able to read the result.
 - CLI: `keel run --model fake --script tests/fixtures/s1.yaml`.
 - Done when: a scripted run produces a JSONL log, a spilled file, and `ff_pointer_integrity` passes on it; a torn last line is detected and reported, not crashed on.
 
-### S2 · Store, handles, pull tools
+### S2 · Store, handles, pull tools — ✅ implemented
 - `ports/store.py`, `adapters/local_store.py`: content-addressed blobs, `Handle` frozen.
-- `store/handles.py`, `store/index.py`; `tools/builtin/{outline,grep,read}.py` resolve only through the store.
-- Tests: path traversal attempts (`../`, symlinks, absolute paths) are rejected with an event; identical content yields identical handle id.
+- `store/handles.py`, `store/index.py`, `store/spill.py`, `store/errors.py`; `tools/builtin/{outline,grep,read}.py` resolve only through the store.
+- `store/handles.py`: `Handle` Pydantic model with id, kind, tokens, sha256, label, preview_head, preview_tail, blob_path (optional).
+- `store/index.py`: `HandleIndex` with append, get, delete, list operations over JSONL.
+- `store/spill.py`: Content spill to filesystem with blob_path tracking.
+- `verify/ff/{pointer_integrity,secrets,sensitive_data}.py`: re-pointed at the real store with blob_path.
+- Tests: path traversal attempts (`../`, symlinks, absolute paths) are rejected with an event; identical content yields identical handle id; binary content rejected; index round-trip verified.
 - Fitness: `ff_pointer_integrity` re-pointed at the real store.
 
-### S3 · Tool runtime and permission tiers
-- `tools/runtime.py`, `tools/registry.py`, `tools/permissions.py`: JSON-schema args, `ToolResult` envelope, `large_by_nature`, tiers over normalised calls with a shipped rule table + per-project extension file.
-- Tests: `exec pytest` and `exec rm -rf` normalise to different tiers; a denied call emits `ToolDenied` and returns a typed error the model sees; non-default rule table is loaded and honored.
+### S3 · Tool runtime and permission tiers — ✅ implemented
+- `tools/runtime.py`, `tools/registry.py`, `tools/permissions.py`: JSON-schema args, `ToolResult` envelope with handle and redaction_labels spill fields, `large_by_nature`, tiers over normalised calls with a shipped rule table + per-project extension file.
+- `tools/runtime.py`: `ToolResult` dataclass with ok, payload, tokens, error, handle, redaction_labels.
+- `tools/permissions.py`: `PermissionTier` type, wildcard pattern matching (e.g., `exec:*`), `check_permission()` function.
+- `tools/registry.py`: `ToolRegistry` with register and get operations.
+- `keel/kernel/loop.py`: typed dispatch table (TOOL_ARGS), no dynamic inspect.signature, default tier changed to "read".
+- `keel/cli.py`: `--tier` CLI flag to override default permission tier.
+- Tests: `exec pytest` and `exec rm -rf` normalise to different tiers; a denied call emits `ToolDenied` and returns a typed error the model sees; non-default rule table is loaded and honored; unrecognized argument produces error.
 - Fitness: none new; `ff_budget_conformance` groundwork (token counts on every ToolResult).
 
 ### S4 · Subprocess sandbox

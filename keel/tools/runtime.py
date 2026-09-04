@@ -10,6 +10,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Literal
 
+from keel.store.handles import Handle
+
 PermissionTier = Literal["read", "write", "exec", "admin"]
 
 
@@ -24,6 +26,9 @@ class ToolResult:
     large_by_nature: bool = False
     permission_tier: PermissionTier = "read"
     error: str | None = None
+    # Spill metadata: set when content was spilled to the store
+    handle: Handle | None = None
+    redaction_labels: list[str] | None = None
 
 
 @dataclass

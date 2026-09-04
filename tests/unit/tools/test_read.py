@@ -10,7 +10,7 @@ def test_read_returns_content(tmp_path: object) -> None:
     handle = store.put(content, kind="tool_result", label="test", tokens=1)
     result = read_tool(handle.id, store=store)
     assert result.ok is True
-    assert result.content == "hello world"
+    assert result.payload == b"hello world"
     assert result.tokens == 1
 
 

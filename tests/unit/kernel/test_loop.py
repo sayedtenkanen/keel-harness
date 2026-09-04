@@ -104,3 +104,25 @@ def test_path_traversal_rejection_emits_event(tmp_path: Path) -> None:
     store = LocalStore(tmp_path / "store")
     with pytest.raises(PathTraversalError):
         store.put(b"evil", kind="file", label="../etc/passwd", tokens=1)
+
+
+def test_unrecognized_argument_produces_error(tmp_path: Path) -> None:
+    script = [
+        ScriptedToolCall(
+            tool="read", args={"path": str(tmp_path / "small.txt"), "unknown_arg": "value"}
+        ),
+        ScriptedFinalAnswer(text="done"),
+    ]
+    log_path = tmp_path / "run.jsonl"
+    log = EventLog(log_path)
+
+    run(FakeModel(script), log, session_id="t7", max_turns=10, store_dir=tmp_path / "store")
+
+    events = EventLog.read(log_path).events
+    tool_resulted = [e for e in events if e.kind == "tool_resulted"]
+    assert len(tool_resulted) == 1
+    assert tool_resulted[0].ok is False
+
+    # Check that the error message mentions the unexpected argument
+    history_events = [e for e in events if e.kind == "tool_called"]
+    assert len(history_events) == 1

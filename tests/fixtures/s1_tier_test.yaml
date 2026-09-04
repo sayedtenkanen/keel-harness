@@ -1,0 +1,8 @@
+session_id: s1-tier-test
+steps:
+  - step: tool_call
+    tool: exec
+    args:
+      cmd: "echo hello"
+  - step: final_answer
+    text: "done"

@@ -10,8 +10,7 @@ def test_outline_small_content(tmp_path: object) -> None:
     handle = store.put(content, kind="file", label="test.txt", tokens=1)
     result = outline_tool(handle.id, store=store)
     assert result.ok is True
-    assert result.outline is not None
-    assert "line 1" in result.outline
+    assert b"line 1" in result.payload
 
 
 def test_outline_large_content(tmp_path: object) -> None:
@@ -20,8 +19,7 @@ def test_outline_large_content(tmp_path: object) -> None:
     handle = store.put(content, kind="file", label="big.txt", tokens=25)
     result = outline_tool(handle.id, store=store)
     assert result.ok is True
-    assert result.outline is not None
-    assert "more lines" in result.outline
+    assert b"more lines" in result.payload
 
 
 def test_outline_unknown_handle(tmp_path: object) -> None:

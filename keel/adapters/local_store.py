@@ -26,14 +26,6 @@ def _is_safe_label(label: str) -> bool:
     return ".." not in label.split("/") and ".." not in label.split("\\")
 
 
-def _is_symlink(path: Path) -> bool:
-    """Check if path or any parent is a symlink."""
-    try:
-        return path.is_symlink()
-    except OSError:
-        return False
-
-
 class LocalStore:
     """Content-addressed blob store on the local filesystem."""
 
@@ -58,7 +50,15 @@ class LocalStore:
         if not _is_safe_label(label):
             raise PathTraversalError(f"path traversal detected in label: {label}")
 
-        redacted, _ = redact(content.decode("utf-8", errors="replace"))
+        # Guard against binary content that can't be decoded as UTF-8
+        try:
+            text = content.decode("utf-8")
+        except UnicodeDecodeError as e:
+            raise NotImplementedError(
+                "binary content is not yet supported; only UTF-8 text can be stored"
+            ) from e
+
+        redacted, _ = redact(text)
         raw = redacted.encode("utf-8")
 
         sha = hashlib.sha256(raw).hexdigest()
@@ -68,9 +68,11 @@ class LocalStore:
         if not blob_path.exists():
             blob_path.write_bytes(raw)
 
-        text = raw.decode("utf-8", errors="replace")
-        preview_head = text[:PREVIEW_CHARS]
-        preview_tail = text[-PREVIEW_CHARS:] if len(text) > PREVIEW_CHARS else text
+        preview_head = raw[:PREVIEW_CHARS].decode("utf-8", errors="replace")
+        if len(raw) > PREVIEW_CHARS:
+            preview_tail = raw[-PREVIEW_CHARS:].decode("utf-8", errors="replace")
+        else:
+            preview_tail = raw.decode("utf-8", errors="replace")
 
         handle = Handle(
             id=handle_id,

@@ -2,38 +2,37 @@
 
 from __future__ import annotations
 
+import json
 import re
-from dataclasses import dataclass
 
 from keel.ports.store import StorePort
+from keel.tools.runtime import ToolResult
 
 MAX_MATCHES = 100
 
 
-@dataclass
-class GrepMatch:
-    line: int
-    text: str
-
-
-@dataclass
-class GrepResult:
-    ok: bool
-    matches: list[GrepMatch] | None
-    total: int
-    error: str | None = None
-
-
-def grep_tool(pattern: str, handle_id: str, *, store: StorePort) -> GrepResult:
+def grep_tool(pattern: str, handle_id: str, *, store: StorePort) -> ToolResult:
     """Search content in the store for a pattern."""
     handle = store.handle(handle_id)
     if handle is None:
-        return GrepResult(ok=False, matches=None, total=0, error=f"handle not found: {handle_id}")
+        return ToolResult(
+            tool="grep",
+            ok=False,
+            payload=b"",
+            tokens=0,
+            error=f"handle not found: {handle_id}",
+        )
 
     try:
         regex = re.compile(pattern)
     except re.error as e:
-        return GrepResult(ok=False, matches=None, total=0, error=f"invalid pattern: {e}")
+        return ToolResult(
+            tool="grep",
+            ok=False,
+            payload=b"",
+            tokens=0,
+            error=f"invalid pattern: {e}",
+        )
 
     content = store.get(handle)
     text = content.decode("utf-8", errors="replace")
@@ -42,8 +41,13 @@ def grep_tool(pattern: str, handle_id: str, *, store: StorePort) -> GrepResult:
     matches = []
     for i, line in enumerate(lines, 1):
         if regex.search(line):
-            matches.append(GrepMatch(line=i, text=line))
+            matches.append({"line": i, "text": line})
             if len(matches) >= MAX_MATCHES:
                 break
 
-    return GrepResult(ok=True, matches=matches, total=len(matches))
+    return ToolResult(
+        tool="grep",
+        ok=True,
+        payload=json.dumps(matches).encode("utf-8"),
+        tokens=handle.tokens,
+    )

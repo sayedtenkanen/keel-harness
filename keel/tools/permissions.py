@@ -79,7 +79,19 @@ def check_permission(
         rules = DEFAULT_RULES
 
     pattern = normalise_call(tool, args)
-    required = rules.get(pattern, rules.get(tool, "read"))
+
+    # Try exact match first, then wildcard patterns
+    required = rules.get(pattern)
+    if required is None:
+        # Check for wildcard patterns (e.g., "exec:*" matches "exec:echo hello")
+        for rule_pattern, rule_tier in rules.items():
+            if rule_pattern.endswith(":*") and pattern.startswith(rule_pattern[:-1]):
+                required = rule_tier
+                break
+
+    if required is None:
+        # Fall back to tool name without args
+        required = rules.get(tool, "read")
 
     allowed_idx = TIER_ORDER.index(allowed_tier)
     required_idx = TIER_ORDER.index(required)

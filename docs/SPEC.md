@@ -137,9 +137,11 @@ stop condition or budget wall. Hooks (`before_assemble`, `after_tool`,
 
 ### 3.7 Tool runtime
 Typed tools with JSON-schema args, a permission tier over the *normalised call*
-(tool + argument pattern), and a result envelope the spill layer wraps. Tools
+(tool + argument pattern), and a `ToolResult` envelope with spill support. Tools
 declare `large_by_nature` so the runtime spills before the model sees the
-payload. Every denial is an event.
+payload. Every denial is an event. The kernel uses a typed dispatch table
+(TOOL_ARGS) for argument validation rather than dynamic introspection. Default
+permission tier is "read"; CLI `--tier` flag allows override.
 
 ### 3.8 SandboxPort
 `run(cmd, cwd, timeout, env) → ExecResult`, plus `snapshot()` / `restore()` so a
@@ -181,7 +183,7 @@ Pydantic v2, versioned under `keel/schemas/vN/`, migration test per bump.
 
 ```python
 Handle(id, kind: Literal["file","tool_result","paste","handoff","map","memory"],
-       tokens, sha256, label, preview_head, preview_tail)
+       tokens, sha256, label, preview_head, preview_tail, blob_path: str | None = None)
 
 ContextBudget(total, map, retrieved, tool_results, history, reserve)
 
@@ -195,7 +197,8 @@ HandoffRecord(session_id, map_hash, state: CompactionState,
 
 DelegationContract(question, scope: list[Handle], result_schema, budget, depth)
 
-ToolResult(tool, ok, payload: bytes, tokens, large_by_nature, permission_tier)
+ToolResult(ok, payload: bytes, tokens, error: str | None, handle: Handle | None,
+           redaction_labels: list[str] | None)
 ```
 
 ## 5. Package layout

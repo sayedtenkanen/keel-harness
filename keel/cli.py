@@ -36,6 +36,12 @@ def build_parser() -> argparse.ArgumentParser:
     run_p.add_argument(
         "--store", type=Path, default=None, help="Store directory (default: .keel/store)"
     )
+    run_p.add_argument(
+        "--tier",
+        choices=["read", "write", "exec", "admin"],
+        default="read",
+        help="Permission tier for tool calls (default: read)",
+    )
 
     verify_p = sub.add_parser("verify", help="Run fitness functions over an event log")
     verify_p.add_argument("log", type=Path)
@@ -67,7 +73,14 @@ def _cmd_run(args: argparse.Namespace) -> int:
     log_path: Path = args.log or Path(".keel/logs") / f"{session_id}.jsonl"
     store_dir: Path = args.store or Path(".keel/store")
     log = EventLog(log_path)
-    result = run(FakeModel(steps), log, session_id, max_turns=args.max_turns, store_dir=store_dir)
+    result = run(
+        FakeModel(steps),
+        log,
+        session_id,
+        max_turns=args.max_turns,
+        store_dir=store_dir,
+        allowed_tier=args.tier,
+    )
 
     print(f"session={result.session_id} turns={result.turns} reason={result.reason}")
     if result.final_answer:

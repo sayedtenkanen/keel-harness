@@ -74,3 +74,10 @@ def test_symlink_label_rejected(tmp_path: object) -> None:
     # a label that contains ".." to test the rejection
     with pytest.raises(PathTraversalError, match="path traversal"):
         store.put(b"evil", kind="file", label="link/../secret", tokens=1)
+
+
+def test_binary_content_rejected(tmp_path: object) -> None:
+    store = LocalStore(path=tmp_path)  # type: ignore[arg-type]
+    binary = b"\x80\x81\x82\xff"  # invalid UTF-8 bytes
+    with pytest.raises(NotImplementedError, match="binary content"):
+        store.put(binary, kind="file", label="binary.bin", tokens=1)
