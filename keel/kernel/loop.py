@@ -1,9 +1,8 @@
 """The kernel — deliberately thin: plan -> assemble -> call -> dispatch -> observe.
 
 Slice 1's "assemble" step is trivial (a growing list of dicts); the real
-assembler with layout policy and budget lands in slices 7-8. `TOOLS` is a
-placeholder for `tools/registry.py` (slice 3), which will also add permission
-tiers before anything execs.
+assembler with layout policy and budget lands in slices 7-8. Tools are now
+registered via the tool registry and checked against permission tiers.
 
 Every value written to the event log passes through keel.security.redact
 first (tool-call args, final-answer text). The value returned to the caller
@@ -13,20 +12,28 @@ becomes durable, not what the caller does with the answer.
 
 from __future__ import annotations
 
+import inspect
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 from keel.adapters.fake_model import FakeModel
 from keel.adapters.local_store import LocalStore
 from keel.ports.model import ModelRequest
 from keel.security.redact import Match, redact
 from keel.session.log import EventLog
+from keel.store.errors import PathTraversalError
 from keel.tools.builtin.grep import grep_tool
 from keel.tools.builtin.outline import outline_tool
 from keel.tools.builtin.read import read_tool
+from keel.tools.permissions import check_permission
+from keel.tools.registry import REGISTRY, ToolRegistry
+from keel.tools.runtime import PermissionTier
 
-TOOLS = {"read": read_tool, "outline": outline_tool, "grep": grep_tool}
+# Register built-in tools
+REGISTRY.register("read", read_tool)
+REGISTRY.register("outline", outline_tool)
+REGISTRY.register("grep", grep_tool)
 
 DEFAULT_STORE_DIR = Path(".keel/store")
 
@@ -59,8 +66,13 @@ def run(
     *,
     max_turns: int = 20,
     store_dir: Path = DEFAULT_STORE_DIR,
+    allowed_tier: PermissionTier = "admin",
+    registry: ToolRegistry | None = None,
 ) -> RunResult:
     store = LocalStore(store_dir)
+    if registry is None:
+        registry = REGISTRY
+
     log.emit(session_id, "run_started", model=type(model).__name__, max_turns=max_turns)
     history: list[dict[str, object]] = []
     turn = 0
@@ -91,16 +103,54 @@ def run(
                         labels=sorted({m.label for m in arg_matches}),
                     )
 
-                tool_fn = TOOLS[call.tool]
+                # Check permission
+                allowed, required_tier, reason_msg = check_permission(
+                    call.tool, call.args, allowed_tier=allowed_tier
+                )
+                if not allowed:
+                    log.emit(
+                        session_id,
+                        "tool_denied",
+                        turn=turn,
+                        tool=call.tool,
+                        args=logged_args,
+                        tier=required_tier,
+                        reason=reason_msg,
+                    )
+                    log.emit(
+                        session_id,
+                        "tool_resulted",
+                        turn=turn,
+                        tool=call.tool,
+                        ok=False,
+                        tokens=0,
+                        spilled=False,
+                    )
+                    history.append({"tool": call.tool, "content": f"ERROR: {reason_msg}"})
+                    continue
+
+                # Dispatch tool
+                tool_fn = registry.get(call.tool)
+                if tool_fn is None:
+                    log.emit(
+                        session_id,
+                        "tool_resulted",
+                        turn=turn,
+                        tool=call.tool,
+                        ok=False,
+                        tokens=0,
+                        spilled=False,
+                    )
+                    history.append(
+                        {"tool": call.tool, "content": f"ERROR: unknown tool {call.tool}"}
+                    )
+                    continue
+
                 # Filter out extra args that the tool doesn't expect
-                import inspect
-
-                from keel.store.errors import PathTraversalError
-
-                sig = inspect.signature(tool_fn)  # type: ignore[arg-type]
+                sig = inspect.signature(tool_fn)
                 valid_args = {k: v for k, v in call.args.items() if k in sig.parameters}
                 try:
-                    result = tool_fn(**valid_args, store=store)  # type: ignore[operator]
+                    result: Any = tool_fn(**valid_args, store=store)
                 except PathTraversalError as e:
                     log.emit(
                         session_id,
@@ -121,7 +171,8 @@ def run(
                     history.append({"tool": call.tool, "content": f"ERROR: {e}"})
                     continue
 
-                if hasattr(result, "spilled") and result.spilled:
+                # Handle different result types
+                if hasattr(result, "spilled") and getattr(result, "spilled", False):
                     log.emit(
                         session_id,
                         "tool_resulted",
@@ -165,8 +216,8 @@ def run(
                         "tool_resulted",
                         turn=turn,
                         tool=call.tool,
-                        ok=result.ok,
-                        tokens=0,
+                        ok=getattr(result, "ok", False),
+                        tokens=getattr(result, "tokens", 0),
                         spilled=False,
                     )
             turn += 1

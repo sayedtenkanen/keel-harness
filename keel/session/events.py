@@ -99,6 +99,21 @@ class PathTraversalRejected(EventBase):
     tool: str
 
 
+class ToolDenied(EventBase):
+    """Emitted when a tool call is denied by the permission system.
+
+    `tool` is the tool name; `args` are the call arguments; `tier` is the
+    required tier; `reason` explains why it was denied.
+    """
+
+    kind: Literal["tool_denied"] = "tool_denied"
+    turn: int
+    tool: str
+    args: dict[str, object]
+    tier: str
+    reason: str
+
+
 AnyEvent = (
     RunStarted
     | ModelCalled
@@ -110,6 +125,7 @@ AnyEvent = (
     | RunEnded
     | RedactionApplied
     | PathTraversalRejected
+    | ToolDenied
 )
 
 EVENT_TYPES: dict[str, type[EventBase]] = {
@@ -123,4 +139,5 @@ EVENT_TYPES: dict[str, type[EventBase]] = {
     "run_ended": RunEnded,
     "redaction_applied": RedactionApplied,
     "path_traversal_rejected": PathTraversalRejected,
+    "tool_denied": ToolDenied,
 }
