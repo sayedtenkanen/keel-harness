@@ -46,6 +46,10 @@ def build_parser() -> argparse.ArgumentParser:
     verify_p = sub.add_parser("verify", help="Run fitness functions over an event log")
     verify_p.add_argument("log", type=Path)
 
+    from keel.inspector.cli import register_inspect
+
+    register_inspect(sub)
+
     return parser
 
 
@@ -108,6 +112,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _cmd_run(args)
     if args.command == "verify":
         return _cmd_verify(args)
+    if args.command == "inspect":
+        from keel.inspector.cli import cmd_inspect
+
+        return cmd_inspect(args)
 
     parser.print_help()
     return 0

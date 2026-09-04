@@ -1,0 +1,11 @@
+{"kind":"run_started","seq":0,"ts":"2026-09-04T13:00:00Z","session_id":"sess-spill","model":"FakeModel","max_turns":20}
+{"kind":"model_called","seq":1,"ts":"2026-09-04T13:00:00Z","session_id":"sess-spill","turn":0}
+{"kind":"model_responded","seq":2,"ts":"2026-09-04T13:00:00Z","session_id":"sess-spill","turn":0,"tool_calls":["read"],"final_answer":null}
+{"kind":"tool_called","seq":3,"ts":"2026-09-04T13:00:00Z","session_id":"sess-spill","turn":0,"tool":"read","args":{"path":"bigfile.txt"}}
+{"kind":"tool_resulted","seq":4,"ts":"2026-09-04T13:00:00Z","session_id":"sess-spill","turn":0,"tool":"read","ok":true,"tokens":9000,"spilled":true}
+{"kind":"spilled","seq":5,"ts":"2026-09-04T13:00:00Z","session_id":"sess-spill","turn":0,"handle_id":"abc123def456","tokens":9000,"blob_path":"/tmp/store/blobs/abc123def456"}
+{"kind":"redaction_applied","seq":6,"ts":"2026-09-04T13:00:00Z","session_id":"sess-spill","turn":0,"where":"spilled:abc123def456","labels":["aws_access_key"]}
+{"kind":"model_called","seq":7,"ts":"2026-09-04T13:00:00Z","session_id":"sess-spill","turn":1}
+{"kind":"model_responded","seq":8,"ts":"2026-09-04T13:00:00Z","session_id":"sess-spill","turn":1,"tool_calls":[],"final_answer":"Found secrets."}
+{"kind":"final_answer","seq":9,"ts":"2026-09-04T13:00:00Z","session_id":"sess-spill","turn":1,"text":"Found secrets."}
+{"kind":"run_ended","seq":10,"ts":"2026-09-04T13:00:00Z","session_id":"sess-spill","reason":"final_answer","turns":2}

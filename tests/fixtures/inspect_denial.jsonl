@@ -1,0 +1,10 @@
+{"kind":"run_started","seq":0,"ts":"2026-09-04T12:00:00Z","session_id":"sess-denial","model":"FakeModel","max_turns":20}
+{"kind":"model_called","seq":1,"ts":"2026-09-04T12:00:00Z","session_id":"sess-denial","turn":0}
+{"kind":"model_responded","seq":2,"ts":"2026-09-04T12:00:00Z","session_id":"sess-denial","turn":0,"tool_calls":["exec"],"final_answer":null}
+{"kind":"tool_called","seq":3,"ts":"2026-09-04T12:00:00Z","session_id":"sess-denial","turn":0,"tool":"exec","args":{"cmd":"rm -rf /tmp/test"}}
+{"kind":"tool_denied","seq":4,"ts":"2026-09-04T12:00:00Z","session_id":"sess-denial","turn":0,"tool":"exec","args":{"cmd":"rm -rf /tmp/test"},"tier":"admin","reason":"exec:rm -rf * requires admin, got read"}
+{"kind":"tool_resulted","seq":5,"ts":"2026-09-04T12:00:00Z","session_id":"sess-denial","turn":0,"tool":"exec","ok":false,"tokens":0,"spilled":false}
+{"kind":"model_called","seq":6,"ts":"2026-09-04T12:00:00Z","session_id":"sess-denial","turn":1}
+{"kind":"model_responded","seq":7,"ts":"2026-09-04T12:00:00Z","session_id":"sess-denial","turn":1,"tool_calls":[],"final_answer":"Access denied, done."}
+{"kind":"final_answer","seq":8,"ts":"2026-09-04T12:00:00Z","session_id":"sess-denial","turn":1,"text":"Access denied, done."}
+{"kind":"run_ended","seq":9,"ts":"2026-09-04T12:00:00Z","session_id":"sess-denial","reason":"final_answer","turns":2}

@@ -1,0 +1,9 @@
+{"kind":"run_started","seq":0,"ts":"2026-09-04T10:00:00Z","session_id":"sess-clean","model":"FakeModel","max_turns":20}
+{"kind":"model_called","seq":1,"ts":"2026-09-04T10:00:00Z","session_id":"sess-clean","turn":0}
+{"kind":"model_responded","seq":2,"ts":"2026-09-04T10:00:00Z","session_id":"sess-clean","turn":0,"tool_calls":["read"],"final_answer":null}
+{"kind":"tool_called","seq":3,"ts":"2026-09-04T10:00:00Z","session_id":"sess-clean","turn":0,"tool":"read","args":{"path":"src/main.py"}}
+{"kind":"tool_resulted","seq":4,"ts":"2026-09-04T10:00:00Z","session_id":"sess-clean","turn":0,"tool":"read","ok":true,"tokens":12,"spilled":false}
+{"kind":"model_called","seq":5,"ts":"2026-09-04T10:00:00Z","session_id":"sess-clean","turn":1}
+{"kind":"model_responded","seq":6,"ts":"2026-09-04T10:00:00Z","session_id":"sess-clean","turn":1,"tool_calls":[],"final_answer":"All looks good."}
+{"kind":"final_answer","seq":7,"ts":"2026-09-04T10:00:00Z","session_id":"sess-clean","turn":1,"text":"All looks good."}
+{"kind":"run_ended","seq":8,"ts":"2026-09-04T10:00:00Z","session_id":"sess-clean","reason":"final_answer","turns":2}
