@@ -18,14 +18,17 @@ from pathlib import Path
 from typing import Literal
 
 from keel.adapters.fake_model import FakeModel
+from keel.adapters.local_store import LocalStore
 from keel.ports.model import ModelRequest
 from keel.security.redact import Match, redact
 from keel.session.log import EventLog
+from keel.tools.builtin.grep import grep_tool
+from keel.tools.builtin.outline import outline_tool
 from keel.tools.builtin.read import read_tool
 
-TOOLS = {"read": read_tool}
+TOOLS = {"read": read_tool, "outline": outline_tool, "grep": grep_tool}
 
-DEFAULT_SPILL_DIR = Path(".keel/spill")
+DEFAULT_STORE_DIR = Path(".keel/store")
 
 
 @dataclass
@@ -55,8 +58,9 @@ def run(
     session_id: str,
     *,
     max_turns: int = 20,
-    spill_dir: Path = DEFAULT_SPILL_DIR,
+    store_dir: Path = DEFAULT_STORE_DIR,
 ) -> RunResult:
+    store = LocalStore(store_dir)
     log.emit(session_id, "run_started", model=type(model).__name__, max_turns=max_turns)
     history: list[dict[str, object]] = []
     turn = 0
@@ -88,36 +92,61 @@ def run(
                     )
 
                 tool_fn = TOOLS[call.tool]
-                result = tool_fn(str(call.args["path"]), spill_dir=spill_dir)
-                log.emit(
-                    session_id,
-                    "tool_resulted",
-                    turn=turn,
-                    tool=call.tool,
-                    ok=result.ok,
-                    tokens=result.tokens,
-                    spilled=result.spilled,
-                )
-                if result.spilled:
+                # Filter out extra args that the tool doesn't expect
+                import inspect
+
+                sig = inspect.signature(tool_fn)  # type: ignore[arg-type]
+                valid_args = {k: v for k, v in call.args.items() if k in sig.parameters}
+                result = tool_fn(**valid_args, store=store)  # type: ignore[operator]
+
+                if hasattr(result, "spilled") and result.spilled:
+                    log.emit(
+                        session_id,
+                        "tool_resulted",
+                        turn=turn,
+                        tool=call.tool,
+                        ok=result.ok,
+                        tokens=result.tokens,
+                        spilled=True,
+                    )
                     log.emit(
                         session_id,
                         "spilled",
                         turn=turn,
-                        handle_id=result.handle_id,
-                        tokens=result.tokens,
-                        path=str(result.path),
+                        handle_id=result.handle.id,
+                        tokens=result.handle.tokens,
+                        path=str(store_dir / "blobs" / result.handle.id),
                     )
                     if result.redaction_labels:
                         log.emit(
                             session_id,
                             "redaction_applied",
                             turn=turn,
-                            where=f"spilled:{result.handle_id}",
+                            where=f"spilled:{result.handle.id}",
                             labels=result.redaction_labels,
                         )
-                    history.append({"tool": call.tool, "handle_id": result.handle_id})
-                else:
+                    history.append({"tool": call.tool, "handle_id": result.handle.id})
+                elif hasattr(result, "content"):
+                    log.emit(
+                        session_id,
+                        "tool_resulted",
+                        turn=turn,
+                        tool=call.tool,
+                        ok=result.ok,
+                        tokens=result.tokens,
+                        spilled=False,
+                    )
                     history.append({"tool": call.tool, "content": result.content})
+                else:
+                    log.emit(
+                        session_id,
+                        "tool_resulted",
+                        turn=turn,
+                        tool=call.tool,
+                        ok=result.ok,
+                        tokens=0,
+                        spilled=False,
+                    )
             turn += 1
             continue
 

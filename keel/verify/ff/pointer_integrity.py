@@ -1,7 +1,7 @@
 """ff_pointer_integrity — every handle that entered a window must resolve.
 
-Slice 1 scope: every `spilled` event's path exists on disk. Slice 2 widens
-this to check handles pulled from the real store, not just read-tool spills.
+Slice 2: checks that every Spilled event's handle_id exists in the store's
+blob directory. The store path is derived from the Spilled event's path field.
 """
 
 from __future__ import annotations
@@ -13,20 +13,27 @@ from keel.verify.registry import Finding, register
 
 FF_ID = "ff_pointer_integrity"
 
+STORE_BLOBS_DIR = "blobs"
+
 
 def check(events: list[AnyEvent]) -> list[Finding]:
     findings: list[Finding] = []
+
     for event in events:
-        if isinstance(event, Spilled) and not Path(event.path).exists():
-            findings.append(
-                Finding(
-                    ff_id=FF_ID,
-                    ok=False,
-                    message=(
-                        f"handle {event.handle_id} spilled to {event.path} but the file is gone"
-                    ),
+        if isinstance(event, Spilled):
+            # The path field contains the full path to the blob file
+            blob_path = Path(event.path)
+            if not blob_path.exists():
+                findings.append(
+                    Finding(
+                        ff_id=FF_ID,
+                        ok=False,
+                        message=(
+                            f"handle {event.handle_id} spilled but blob not found at {blob_path}"
+                        ),
+                    )
                 )
-            )
+
     if not findings:
         findings.append(Finding(ff_id=FF_ID, ok=True, message="all spilled handles resolve"))
     return findings

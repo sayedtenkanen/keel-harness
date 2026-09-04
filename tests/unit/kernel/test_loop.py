@@ -16,7 +16,7 @@ def test_scripted_run_reads_a_file_then_answers(tmp_path: Path) -> None:
     log = EventLog(log_path)
 
     result = run(
-        FakeModel(script), log, session_id="t1", max_turns=10, spill_dir=tmp_path / "spill"
+        FakeModel(script), log, session_id="t1", max_turns=10, store_dir=tmp_path / "store"
     )
 
     assert result.reason == "final_answer"
@@ -34,7 +34,7 @@ def test_run_stops_at_max_turns_if_the_model_never_answers(tmp_path: Path) -> No
     script = [ScriptedToolCall(tool="read", args={"path": str(small)})] * 3
     log = EventLog(tmp_path / "run.jsonl")
 
-    result = run(FakeModel(script), log, session_id="t2", max_turns=3, spill_dir=tmp_path / "spill")
+    result = run(FakeModel(script), log, session_id="t2", max_turns=3, store_dir=tmp_path / "store")
 
     assert result.reason == "max_turns"
     assert result.turns == 3
@@ -50,7 +50,7 @@ def test_a_large_tool_result_is_spilled_and_logged(tmp_path: Path) -> None:
     log_path = tmp_path / "run.jsonl"
     log = EventLog(log_path)
 
-    run(FakeModel(script), log, session_id="t3", max_turns=10, spill_dir=tmp_path / "spill")
+    run(FakeModel(script), log, session_id="t3", max_turns=10, store_dir=tmp_path / "store")
 
     kinds = [e.kind for e in EventLog.read(log_path).events]
     assert "spilled" in kinds
@@ -64,7 +64,7 @@ def test_a_secret_in_a_final_answer_is_redacted_in_the_log_but_not_in_the_result
     log_path = tmp_path / "run.jsonl"
     log = EventLog(log_path)
 
-    result = run(FakeModel(script), log, session_id="t4", max_turns=5, spill_dir=tmp_path / "spill")
+    result = run(FakeModel(script), log, session_id="t4", max_turns=5, store_dir=tmp_path / "store")
 
     assert result.final_answer == secret_answer  # caller gets the true value
     events = EventLog.read(log_path).events
@@ -85,7 +85,7 @@ def test_a_secret_in_tool_args_is_redacted_before_logging(tmp_path: Path) -> Non
     log_path = tmp_path / "run.jsonl"
     log = EventLog(log_path)
 
-    run(FakeModel(script), log, session_id="t5", max_turns=10, spill_dir=tmp_path / "spill")
+    run(FakeModel(script), log, session_id="t5", max_turns=10, store_dir=tmp_path / "store")
 
     events = EventLog.read(log_path).events
     tool_called = next(e for e in events if e.kind == "tool_called")
