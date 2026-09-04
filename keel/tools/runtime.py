@@ -1,8 +1,8 @@
 """Tool runtime — ToolResult envelope and tool metadata.
 
 Every tool call returns a ToolResult. The spill layer wraps large payloads.
-Tools declare `large_by_nature` so the runtime spills before the model sees
-the payload.
+Tools declare `large_by_nature` on ToolMeta so the runtime can decide
+whether to spill before the model sees the payload.
 """
 
 from __future__ import annotations
@@ -19,12 +19,9 @@ PermissionTier = Literal["read", "write", "exec", "admin"]
 class ToolResult:
     """Envelope for tool execution results."""
 
-    tool: str
     ok: bool
     payload: bytes
     tokens: int
-    large_by_nature: bool = False
-    permission_tier: PermissionTier = "read"
     error: str | None = None
     # Spill metadata: set when content was spilled to the store
     handle: Handle | None = None

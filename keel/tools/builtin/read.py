@@ -21,7 +21,6 @@ def read_tool(handle_id: str = "", *, store: StorePort, path: str = "") -> ToolR
         handle = store.handle(handle_id)
         if handle is None:
             return ToolResult(
-                tool="read",
                 ok=False,
                 payload=b"",
                 tokens=0,
@@ -29,7 +28,6 @@ def read_tool(handle_id: str = "", *, store: StorePort, path: str = "") -> ToolR
             )
         content = store.get(handle)
         return ToolResult(
-            tool="read",
             ok=True,
             payload=content,
             tokens=handle.tokens,
@@ -41,7 +39,6 @@ def read_tool(handle_id: str = "", *, store: StorePort, path: str = "") -> ToolR
         spill_result = maybe_spill(text, store=store, kind="tool_result", label=Path(path).name)
         if spill_result.spilled:
             return ToolResult(
-                tool="read",
                 ok=True,
                 payload=b"",
                 tokens=spill_result.tokens,
@@ -49,14 +46,12 @@ def read_tool(handle_id: str = "", *, store: StorePort, path: str = "") -> ToolR
                 redaction_labels=spill_result.redaction_labels,
             )
         return ToolResult(
-            tool="read",
             ok=True,
             payload=text.encode("utf-8"),
             tokens=spill_result.tokens,
         )
 
     return ToolResult(
-        tool="read",
         ok=False,
         payload=b"",
         tokens=0,

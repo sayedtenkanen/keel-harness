@@ -16,7 +16,6 @@ def grep_tool(pattern: str, handle_id: str, *, store: StorePort) -> ToolResult:
     handle = store.handle(handle_id)
     if handle is None:
         return ToolResult(
-            tool="grep",
             ok=False,
             payload=b"",
             tokens=0,
@@ -27,7 +26,6 @@ def grep_tool(pattern: str, handle_id: str, *, store: StorePort) -> ToolResult:
         regex = re.compile(pattern)
     except re.error as e:
         return ToolResult(
-            tool="grep",
             ok=False,
             payload=b"",
             tokens=0,
@@ -46,7 +44,6 @@ def grep_tool(pattern: str, handle_id: str, *, store: StorePort) -> ToolResult:
                 break
 
     return ToolResult(
-        tool="grep",
         ok=True,
         payload=json.dumps(matches).encode("utf-8"),
         tokens=handle.tokens,

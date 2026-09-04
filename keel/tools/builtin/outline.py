@@ -13,7 +13,6 @@ def outline_tool(handle_id: str, *, store: StorePort) -> ToolResult:
     handle = store.handle(handle_id)
     if handle is None:
         return ToolResult(
-            tool="outline",
             ok=False,
             payload=b"",
             tokens=0,
@@ -31,7 +30,6 @@ def outline_tool(handle_id: str, *, store: StorePort) -> ToolResult:
         outline = f"{head}\n... ({len(lines) - MAX_OUTLINE_LINES} more lines)"
 
     return ToolResult(
-        tool="outline",
         ok=True,
         payload=outline.encode("utf-8"),
         tokens=handle.tokens,

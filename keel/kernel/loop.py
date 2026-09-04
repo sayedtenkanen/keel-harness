@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal, cast
+from typing import Literal
 
 from keel.adapters.fake_model import FakeModel
 from keel.adapters.local_store import LocalStore
@@ -184,7 +184,7 @@ def run(
                     continue
 
                 try:
-                    result = cast(ToolResult, tool_fn(**valid_args, store=store))
+                    raw_result = tool_fn(**valid_args, store=store)
                 except PathTraversalError as e:
                     log.emit(
                         session_id,
@@ -205,7 +205,23 @@ def run(
                     history.append({"tool": call.tool, "content": f"ERROR: {e}"})
                     continue
 
+                if not isinstance(raw_result, ToolResult):
+                    log.emit(
+                        session_id,
+                        "tool_resulted",
+                        turn=turn,
+                        tool=call.tool,
+                        ok=False,
+                        tokens=0,
+                        spilled=False,
+                    )
+                    history.append(
+                        {"tool": call.tool, "content": "ERROR: tool returned non-ToolResult"}
+                    )
+                    continue
+
                 # Handle ToolResult envelope
+                result = raw_result
                 if result.handle is not None:
                     # Content was spilled to the store
                     log.emit(

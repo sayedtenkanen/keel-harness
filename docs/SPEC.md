@@ -183,7 +183,7 @@ Pydantic v2, versioned under `keel/schemas/vN/`, migration test per bump.
 
 ```python
 Handle(id, kind: Literal["file","tool_result","paste","handoff","map","memory"],
-       tokens, sha256, label, preview_head, preview_tail, blob_path: str | None = None)
+       tokens, sha256, label, preview_head, preview_tail)
 
 ContextBudget(total, map, retrieved, tool_results, history, reserve)
 
@@ -198,7 +198,8 @@ HandoffRecord(session_id, map_hash, state: CompactionState,
 DelegationContract(question, scope: list[Handle], result_schema, budget, depth)
 
 ToolResult(ok, payload: bytes, tokens, error: str | None, handle: Handle | None,
-           redaction_labels: list[str] | None)
+           redaction_labels: list[str] | None, large_by_nature: bool,
+           permission_tier: PermissionTier)
 ```
 
 ## 5. Package layout
