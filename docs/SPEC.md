@@ -303,3 +303,7 @@ machinery not built. Multi-user or hosted operation. UI beyond CLI and verifier
 report. Streaming token-level UX. Adapters beyond Anthropic, OpenAI-compatible,
 Fake. Vector retrieval — grep and outline first. A general-purpose DLP or security
 product — `security/` is a harness-scoped backstop, not a replacement for one.
+Process-level attacker containment — the S4 sandbox (subprocess cwd jail,
+timeout, env allowlist) prevents accidental self-inflicted damage from a
+misbehaving tool; it is not hardened against a determined adversary and makes
+no such claim.

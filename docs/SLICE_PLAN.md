@@ -59,9 +59,96 @@ together, with the verifier able to read the result.
 - Fitness: none new; `ff_budget_conformance` groundwork (token counts on every ToolResult).
 
 ### S4 · Subprocess sandbox
-- `ports/sandbox.py`, `adapters/subprocess_sandbox.py`: cwd jail, timeout, env allowlist, `snapshot()`/`restore()` (copy-on-write dir or tarball; simplest correct thing).
-- `tools/builtin/exec.py`, `tools/builtin/write.py` behind tiers from S3.
-- Tests: escape attempts fail; timeout emits event; restore discards a write.
+Goal: OS-level enforcement behind the `write`/`exec` permission tiers. Today
+`check_permission()` in `loop.py` correctly denies the call at the dispatch
+boundary, but a misbehaving tool (or a future tool that touches the filesystem
+directly) has no containment. S4 adds a real sandbox so that `exec` runs in a
+caged subprocess and `write` writes only inside an allowed directory.
+
+**Design.** A subprocess with cwd jail, timeout, and env allowlist — the
+simplest correct thing. The `SandboxPort` protocol defines three operations:
+`run(cmd, cwd, timeout, env) → ExecResult`, `snapshot() → SnapshotId`, and
+`restore(snapshot_id)`. The concrete adapter (`SubprocessSandbox`) creates a
+temp working directory, copies it on `snapshot()`, and restores by replacing the
+cwd with the snapshot copy. No container runtime, no OS-specific syscall
+filtering — just process isolation via `subprocess.Popen` with a restricted cwd
+and a cleaned environment. This is provider-agnostic (works on Linux, macOS,
+Windows) and has zero dependencies beyond the stdlib.
+
+The sandbox is **not** a general-purpose security boundary — it is a "good
+citizen" enforcement layer that prevents accidental side effects during
+development and testing. A determined attacker could escape it; that is not the
+threat model. The threat model is: an agent tool that accidentally runs `rm -rf`
+or writes to the wrong directory.
+
+**Integration with the permission tier system.** `check_permission()` remains
+the gatekeeper in `kernel/loop.py` (deny → emit `ToolDenied`, continue). The
+sandbox wraps tool execution *after* the permission check passes: `exec` and
+`write` tools receive a `sandbox: SandboxPort` parameter and call
+`sandbox.run()` or write inside the sandboxed cwd. This keeps the two concerns
+separate — permission is declarative (which tier?), sandbox is imperative (what
+actually happens at the OS level?).
+
+**Files to create:**
+- `ports/sandbox.py`: `SandboxPort` protocol, `ExecResult` dataclass
+  (`returncode`, `stdout`, `stderr`, `timed_out`).
+- `adapters/subprocess_sandbox.py`: `SubprocessSandbox` — cwd jail via temp
+  dir, timeout via `subprocess.run(timeout=...)`, env allowlist via explicit
+  `env` dict, `snapshot()` via `shutil.copytree`, `restore()` via
+  `shutil.copytree` over cwd.
+- `tools/builtin/exec.py`: `exec_tool(cmd, *, sandbox, store)` — calls
+  `sandbox.run(cmd)`, returns `ToolResult`. Registered with
+  `default_tier="exec"`.
+- `tools/builtin/write.py`: `write_tool(path, content, *, sandbox, store)` —
+  writes `content` to `path` inside sandboxed cwd, returns `ToolResult`.
+  Registered with `default_tier="write"`.
+
+**Files to modify:**
+- `kernel/loop.py`: add `sandbox: SandboxPort | None = None` parameter;
+  register `exec` and `write` in `REGISTRY`; add entries to `TOOL_ARGS`;
+  pass `sandbox` to `exec`/`write` tool calls.
+- `tools/permissions.py`: add `write:*` patterns if needed (currently only
+  `exec` patterns exist in `DEFAULT_RULES`).
+- `keel/cli.py`: `--sandbox-dir` option for `keel run` (overrides default
+  temp dir for reproducible tests).
+
+**Event additions:**
+- `SandboxSnapshot(snapshot_id)` — emitted when snapshot is taken.
+- `SandboxRestored(snapshot_id)` — emitted when restore completes.
+- The existing `timeout` field on `ExecResult` maps to a `tool_resulted` event
+  with `ok=False` and an error message; no new event kind needed for timeout
+  itself (it's already representable).
+
+**Fitness function:**
+- `ff_sandbox_isolation`: for every `tool_resulted` event where `ok=True` and
+  the tool is `exec` or `write`, assert that no files were created outside the
+  sandboxed cwd (walk the cwd, compare against a pre-exec snapshot). For
+  `tool_resulted(ok=False)` on exec, assert the cwd is unchanged.
+
+**Tests:**
+- Cwd jail: `exec("ls /")` with sandbox cwd set to a temp dir — output must not
+  contain root filesystem contents.
+- Timeout: `exec("sleep 30")` with `timeout=1` — must emit `tool_resulted` with
+  `ok=False` and `timed_out=True` in the error; no orphaned subprocess.
+- Env allowlist: `exec("echo $SECRET")` with `SECRET` not in allowlist — output
+  must not contain the secret.
+- Snapshot/restore: write a file via `write`, call `snapshot()`, write another
+  file, call `restore()` — second file must be gone.
+- Permission tier: `exec` at `read` tier is denied (covered by S3, but verify
+  integration still works with sandbox present).
+- Escape attempt: `exec("cd ../../.. && pwd")` — cwd must remain inside jail.
+
+**Sequencing note.** The SLICE_PLAN currently places S4 before S6 (ingest).
+This is **not strictly required** — S6 uses `store.put()` which is a local
+filesystem write inside `.keel/store/`, not a sandboxed exec/write. However,
+keeping S4 before S6 is still correct because: (a) it closes the enforcement
+gap before any new write-path tools land, and (b) S12 (orchestrator) needs
+`snapshot()`/`restore()` which S4 introduces. The ordering is right as given.
+
+**Done when:** `keel run` with an exec tool call runs the command inside a
+sandboxed subprocess; `ff_sandbox_isolation` passes; timeout kills the process
+and emits a clean error; `snapshot()`/`restore()` round-trips correctly; escape
+attempts are contained.
 
 ### S5 · Real adapters + learning tests
 - `adapters/anthropic.py`, `adapters/openai_compat.py` with declared `Capabilities` (cache semantics, tool encoding, reasoning-block echo rules).
