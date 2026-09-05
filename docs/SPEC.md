@@ -198,8 +198,7 @@ HandoffRecord(session_id, map_hash, state: CompactionState,
 DelegationContract(question, scope: list[Handle], result_schema, budget, depth)
 
 ToolResult(ok, payload: bytes, tokens, error: str | None, handle: Handle | None,
-           redaction_labels: list[str] | None, large_by_nature: bool,
-           permission_tier: PermissionTier)
+           redaction_labels: list[str] | None)
 ```
 
 ## 5. Package layout
